@@ -23,18 +23,19 @@ if password == "132412":
             
             if search_item:
                 try:
-                    # 💡 수정된 부분: 한글 엑셀 파일(cp949)도 완벽하게 읽도록 안전장치 추가
+                    # 💡 수정: utf-8-sig를 사용해 눈에 안보이는 유령 기호(BOM) 완벽 제거
                     try:
-                        df = pd.read_csv("erp_data.csv", encoding="utf-8")
+                        df = pd.read_csv("erp_data.csv", encoding="utf-8-sig")
                     except UnicodeDecodeError:
                         df = pd.read_csv("erp_data.csv", encoding="cp949")
                     
-                    # 💡 수정된 부분: 엑셀 열 이름에 숨은 띄어쓰기가 있으면 자동으로 제거
+                    # 띄어쓰기 싹 제거
                     df.columns = df.columns.str.strip()
                     
-                    # '상품명' 기둥이 엑셀에 있는지 먼저 확인
+                    # '상품명' 기둥이 있는지 확인
                     if '상품명' not in df.columns:
-                        st.error("엑셀 파일에 '상품명'이라는 열이 없습니다. 엑셀 첫 줄을 확인해주세요!")
+                        # 없다면 실제 기둥 이름이 뭔지 화면에 보여주기
+                        st.error(f"오류: '상품명' 열을 찾을 수 없습니다. 현재 엑셀 파일의 열 이름은 다음과 같습니다: {list(df.columns)}")
                     else:
                         result = df[df['상품명'].astype(str).str.contains(search_item, na=False)]
                         
@@ -43,7 +44,8 @@ if password == "132412":
                             selected_item = st.selectbox("👉 장바구니에 담을 정확한 상품을 선택하세요", item_names)
                             
                             price_str = result[result['상품명'] == selected_item]['가격'].values[0]
-                            unit_price = int(str(price_str).replace(',', ''))
+                            # 가격에 쉼표나 문자가 있어도 숫자로 강제 변환
+                            unit_price = int(str(price_str).replace(',', '').replace('원', '').strip())
                             
                             qty = st.number_input("📦 수량", min_value=1, value=1)
                             
@@ -58,7 +60,6 @@ if password == "132412":
                         else:
                             st.warning("해당하는 품목이 없습니다.")
                 except Exception as e:
-                    # 에러가 나면 정확히 무슨 에러인지 영어로 보여주도록 수정
                     st.error(f"오류가 발생했습니다: {e}")
 
         with col2:
